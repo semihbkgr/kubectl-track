@@ -4,17 +4,18 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/klog"
 )
 
-func Start(w watch.Interface) error {
-	objects := make([]Object, 0)
-	m := newModel(&objects)
+func Start(watchRes watch.Interface, watchResTable watch.Interface) error {
+	resource := NewResource()
+	m := newModel(resource)
 
-	go startWatchingEvents(w, &objects)
+	go startWatchingResourceEvents(resource, watchRes, watchResTable)
 
-	klog.Info("starting the program with the model")
+	klog.Info("start the program with the model")
 	p := tea.NewProgram(m, tea.WithAltScreen())
 
 	if _, err := p.Run(); err != nil {
@@ -24,16 +25,40 @@ func Start(w watch.Interface) error {
 	return nil
 }
 
-func startWatchingEvents(w watch.Interface, objects *[]Object) {
-	klog.Infof("starting events watch")
+func startWatchingResourceEvents(resource *Resource, watchObject watch.Interface, watchTable watch.Interface) {
+	klog.Infof("start watching resource events")
+	objChan := watchObject.ResultChan()
+	tableChan := watchTable.ResultChan()
 	for {
-		e := <-w.ResultChan()
-		klog.Infof("event received, type: %s", e.Type)
-		obj, err := NewObject(e.Object)
-		if err != nil {
-			klog.Warning(err)
-			continue
+		select {
+		case objEvent := <-objChan:
+			klog.Infof("object event received, type: %s", objEvent.Type)
+			obj := objEvent.Object
+			if obj == nil {
+				klog.Info("object in the event is nil")
+				continue
+			}
+			unsObj := obj.(*unstructured.Unstructured)
+			version := unsObj.GetResourceVersion()
+			klog.Infof("resource version: %s", version)
+			resVersion := resource.CreateOrGetVersion(version)
+			resVersion.Object = unsObj
+		case tableEvent := <-tableChan:
+			klog.Infof("table event received, type: %s", tableEvent.Type)
+			obj := tableEvent.Object
+			if obj == nil {
+				klog.Info("object in the event is nil")
+				continue
+			}
+			table, err := DecodeIntoTable(obj)
+			if err != nil {
+				panic(err)
+			}
+			version := table.GetResourceVersion()
+			//version := table.Rows[0].Object.Object.(*unstructured.Unstructured).GetResourceVersion()
+			klog.Infof("resource version: %s", version)
+			resVersion := resource.CreateOrGetVersion(version)
+			resVersion.Table = table
 		}
-		*objects = append(*objects, *obj)
 	}
 }

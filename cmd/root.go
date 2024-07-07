@@ -54,12 +54,7 @@ func run(cmd *cobra.Command, args []string) error {
 		ConfigFlags: cf,
 	}
 
-	err = opts.Run(cmd.Context())
-	if err != nil {
-		klog.Warning(err)
-	}
-
-	return err
+	return opts.Run(cmd.Context())
 }
 
 func configureLogger(flagset *pflag.FlagSet) error {

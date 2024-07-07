@@ -8,36 +8,45 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-type Object struct {
-	unstructured *unstructured.Unstructured
-	table        *metav1.Table
+type Resource struct {
+	VersionsMap map[string]*ResourceVersion
+	Versions    []*ResourceVersion
 }
 
-func NewObject(o runtime.Object) (*Object, error) {
-	if o == nil {
-		return &Object{}, fmt.Errorf("runtime object is nil")
+func NewResource() *Resource {
+	return &Resource{
+		VersionsMap: make(map[string]*ResourceVersion),
+		Versions:    make([]*ResourceVersion, 0),
+	}
+}
+
+func (r *Resource) CreateOrGetVersion(version string) *ResourceVersion {
+	if v, ok := r.VersionsMap[version]; ok {
+		return v
+	}
+	v := &ResourceVersion{}
+	r.VersionsMap[version] = v
+	r.Versions = append(r.Versions, v)
+	return v
+}
+
+func (r *Resource) TableColumnDefinition() []metav1.TableColumnDefinition {
+	return r.Versions[0].Table.ColumnDefinitions
+}
+
+type ResourceVersion struct {
+	Object *unstructured.Unstructured
+	Table  *metav1.Table
+}
+
+func DecodeIntoTable(o runtime.Object) (*metav1.Table, error) {
+	if o.GetObjectKind().GroupVersionKind() != metav1.SchemeGroupVersion.WithKind("Table") {
+		return nil, fmt.Errorf("cannot decode non-table object into table")
 	}
 
 	u, ok := o.(*unstructured.Unstructured)
 	if !ok {
-		return nil, fmt.Errorf("runtime object is not unstructured")
-	}
-
-	table, err := decodeIntoTable(o)
-	if err != nil {
-		return nil, fmt.Errorf("error in decode table: %v", err)
-	}
-
-	return &Object{
-		unstructured: u,
-		table:        table,
-	}, nil
-}
-
-func decodeIntoTable(o runtime.Object) (*metav1.Table, error) {
-	u, ok := o.(*unstructured.Unstructured)
-	if !ok {
-		return nil, fmt.Errorf("attempt to decode non-unstructured object")
+		return nil, fmt.Errorf("cannot decode non-unstructured object into table")
 	}
 
 	table := &metav1.Table{}
