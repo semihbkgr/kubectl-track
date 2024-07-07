@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/semihbkgr/kubectl-track/pkg/cli"
 	"github.com/semihbkgr/kubectl-track/pkg/client"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/klog"
 )
 
 type Options struct {
@@ -26,12 +27,14 @@ func (o Options) Run(ctx context.Context) error {
 
 	ns := client.Namespace(o.ConfigFlags)
 
+	//todo
 	r := schema.GroupVersionResource{
 		Group:    "",
 		Version:  "v1",
 		Resource: o.Resource,
 	}
 
+	klog.Infof("watching resource in namespace: %s", ns)
 	w, err := c.Resource(r).Namespace(ns).Watch(ctx, metav1.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(metav1.ObjectNameField, o.Name).String(),
 	})
@@ -39,11 +42,5 @@ func (o Options) Run(ctx context.Context) error {
 		return fmt.Errorf("error on watching resource: %w", err)
 	}
 
-	for {
-		e := <-w.ResultChan()
-		u := e.Object.(*unstructured.Unstructured)
-		fmt.Println(u.GetName())
-	}
-
-	return nil
+	return cli.Start(w)
 }

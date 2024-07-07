@@ -48,11 +48,18 @@ func run(cmd *cobra.Command, args []string) error {
 
 	klog.Infof("args - resource: %s, name: %s", name, resource)
 
-	return track.Options{
+	opts := track.Options{
 		Resource:    resource,
 		Name:        name,
 		ConfigFlags: cf,
-	}.Run(cmd.Context())
+	}
+
+	err = opts.Run(cmd.Context())
+	if err != nil {
+		klog.Warning(err)
+	}
+
+	return err
 }
 
 func configureLogger(flagset *pflag.FlagSet) error {
