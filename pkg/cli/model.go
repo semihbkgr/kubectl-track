@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/cli-runtime/pkg/printers"
 )
 
@@ -42,7 +43,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.String() == "enter" {
 			if !m.selected {
 				resVersion := m.resource.Versions[m.cursor]
-				y := MapToYaml(resVersion.Object.Object)
+				truncated := TruncateObject(*resVersion.Object)
+				y := MapToYaml(truncated.Object)
 				m.yamlViewport.SetContent(y)
 				m.yamlViewport.SetYOffset(0)
 			}
@@ -117,4 +119,9 @@ func newModel(resource *Resource) model {
 		viewport:     viewport.New(0, 0),
 		yamlViewport: viewport.New(0, 0),
 	}
+}
+
+func TruncateObject(u unstructured.Unstructured) unstructured.Unstructured {
+	u.SetManagedFields(nil)
+	return u
 }
