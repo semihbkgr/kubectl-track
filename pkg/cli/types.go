@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -24,7 +25,7 @@ func (r *Resource) CreateOrGetVersion(version string) *ResourceVersion {
 	if v, ok := r.VersionsMap[version]; ok {
 		return v
 	}
-	v := &ResourceVersion{}
+	v := NewResourceVersion(version, time.Now())
 	r.VersionsMap[version] = v
 	r.Versions = append(r.Versions, v)
 	return v
@@ -35,8 +36,18 @@ func (r *Resource) TableColumnDefinition() []metav1.TableColumnDefinition {
 }
 
 type ResourceVersion struct {
-	Object *unstructured.Unstructured
-	Table  *metav1.Table
+	Version   string
+	Timestamp time.Time
+	Object    *unstructured.Unstructured
+	Table     *metav1.Table
+}
+
+func NewResourceVersion(version string, timestamp time.Time) *ResourceVersion {
+	//todo
+	return &ResourceVersion{
+		Version:   version,
+		Timestamp: timestamp,
+	}
 }
 
 func DecodeIntoTable(o runtime.Object) (*metav1.Table, error) {
