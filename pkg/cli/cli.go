@@ -43,6 +43,7 @@ func startWatchingResourceEvents(resource *Resource, watchObject watch.Interface
 			klog.Infof("resource version: %s", version)
 			resVersion := resource.CreateOrGetVersion(version)
 			resVersion.Object = unsObj
+			resVersion.EventType = objEvent.Type
 		case tableEvent := <-tableChan:
 			klog.Infof("table event received, type: %s", tableEvent.Type)
 			obj := tableEvent.Object

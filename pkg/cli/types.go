@@ -7,6 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/watch"
 )
 
 type Resource struct {
@@ -38,6 +39,7 @@ func (r *Resource) TableColumnDefinition() []metav1.TableColumnDefinition {
 type ResourceVersion struct {
 	Version   string
 	Timestamp time.Time
+	EventType watch.EventType
 	Object    *unstructured.Unstructured
 	Table     *metav1.Table
 }

@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/cli-runtime/pkg/printers"
 )
 
@@ -117,15 +118,19 @@ func (m model) View() string {
 		}
 
 		if i == m.cursor && i > 0 && resVersion.Object != nil {
-			if m.resource.Versions[i-1].Object.GetUID() == resVersion.Object.GetUID() {
-				b.WriteByte('\n')
+			if resVersion.EventType == watch.Modified {
 				if _, ok := m.rvDiffCache[resVersion.Version]; !ok {
 					diff := DiffRenderString(truncateObjectForDiff(*m.resource.Versions[i-1].Object).Object, truncateObjectForDiff(*resVersion.Object).Object)
 					d := lipgloss.NewStyle().PaddingLeft(2).Render(diff)
 					m.rvDiffCache[resVersion.Version] = d
 				}
-				b.WriteString(m.rvDiffCache[resVersion.Version])
+			} else if resVersion.EventType == watch.Added {
+				m.rvDiffCache[resVersion.Version] = lipgloss.NewStyle().Foreground(lipgloss.ANSIColor(82)).PaddingLeft(2).Render("New resource has been added\n")
+			} else if resVersion.EventType == watch.Deleted {
+				m.rvDiffCache[resVersion.Version] = lipgloss.NewStyle().Foreground(lipgloss.ANSIColor(196)).PaddingLeft(2).Render("The resource has been deleted\n")
 			}
+			b.WriteByte('\n')
+			b.WriteString(m.rvDiffCache[resVersion.Version])
 		}
 
 		b.WriteByte('\n')
