@@ -54,8 +54,8 @@ func startWatchingResourceEvents(resource *Resource, watchObject watch.Interface
 			if err != nil {
 				panic(err)
 			}
-			version := table.GetResourceVersion()
 			//version := table.Rows[0].Object.Object.(*unstructured.Unstructured).GetResourceVersion()
+			version := table.GetResourceVersion()
 			klog.Infof("resource version: %s", version)
 			resVersion := resource.CreateOrGetVersion(version)
 			resVersion.Table = table

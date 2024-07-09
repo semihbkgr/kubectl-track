@@ -7,6 +7,7 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/lexer"
 	"github.com/goccy/go-yaml/printer"
+	"github.com/semihbkgr/yamldiff/diff"
 )
 
 var p printer.Printer
@@ -69,4 +70,23 @@ func MapToYaml(a map[string]any) string {
 	}
 	tokens := lexer.Tokenize(string(y))
 	return p.PrintTokens(tokens)
+}
+
+func DiffString(a map[string]any, b map[string]any) string {
+	aYaml, err := yaml.Marshal(a)
+	if err != nil {
+		panic(err)
+	}
+	bYaml, err := yaml.Marshal(b)
+	if err != nil {
+		panic(err)
+	}
+
+	diffCtx, err := diff.NewDiffContextBytes(aYaml, bYaml, true)
+	if err != nil {
+		panic(err)
+	}
+
+	diffs := diffCtx.Diffs(diff.DefaultDiffOptions)
+	return diffs.OutputString(diff.DefaultOutputOptions)
 }

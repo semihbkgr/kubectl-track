@@ -53,7 +53,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.selected = false
 		}
 
-		//todo: scroll the viewport
 		if !m.selected {
 			if msg.String() == "up" || msg.String() == "k" {
 				if m.cursor > 0 {
@@ -94,17 +93,25 @@ func (m model) View() string {
 			bgColor = lipgloss.ANSIColor(239)
 		}
 
-		title := fmt.Sprintf("%s - %s", resVersion.Version, resVersion.Timestamp.Format(time.RFC3339))
-		b.Write([]byte(lipgloss.NewStyle().Foreground(lipgloss.ANSIColor(85)).Background(bgColor).Render(title)))
+		title := fmt.Sprintf("● %s - %s", resVersion.Version, resVersion.Timestamp.Format(time.DateTime))
+		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.ANSIColor(85)).Background(bgColor).Render(title))
+		b.WriteByte('\n')
 		if resVersion.Table != nil {
-			b.WriteByte('\n')
 			//todo: colorize table
-			printer := printers.NewTablePrinter(printers.PrintOptions{})
+			printer := printers.NewTablePrinter(printers.PrintOptions{Wide: true})
 			resVersion.Table.ColumnDefinitions = m.resource.TableColumnDefinition()
 			buf := bytes.NewBuffer([]byte{})
 			printer.PrintObj(resVersion.Table, buf)
-			b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.ANSIColor(153)).Render(buf.String()))
+			t := lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.ANSIColor(153)).Render(buf.String())
+			b.WriteString(t)
 		}
+
+		if i == m.cursor && i > 0 && resVersion.Object != nil {
+			b.WriteByte('\n')
+			diff := DiffString(TruncateObject(*m.resource.Versions[i-1].Object).Object, TruncateObject(*resVersion.Object).Object)
+			b.WriteString(lipgloss.NewStyle().PaddingLeft(2).Render(diff))
+		}
+
 		b.WriteByte('\n')
 	}
 
