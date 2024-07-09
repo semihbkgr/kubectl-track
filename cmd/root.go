@@ -10,14 +10,22 @@ import (
 	"github.com/spf13/pflag"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/klog"
+
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/exec"
 )
 
+var Version string
+
 var rootCmd = &cobra.Command{
-	Use:          "kubectl-track <resource> <name>",
-	Short:        "track changes and events for a specified resource",
-	Args:         cobra.ExactArgs(2),
-	SilenceUsage: true,
-	RunE:         run,
+	Use:   "kubectl-track <resource> <name>",
+	Short: "Monitor and display changes for a Kubernetes resource, highlighting differences between resource versions",
+	Long: `kubectl-track monitors and displays changes for a specified Kubernetes resource, highlighting differences between resource versions to help in debugging and understanding resource evolution. 
+It continuously tracks the resource, displaying each resource version on change, offering clear insights and facilitating troubleshooting. 
+This makes it particularly useful when working with Kubernetes operators and reconciler loops.`,
+	Version: Version,
+	Args:    cobra.ExactArgs(2),
+	RunE:    run,
 }
 
 var cf = genericclioptions.NewConfigFlags(false)

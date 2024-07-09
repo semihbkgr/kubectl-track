@@ -1,0 +1,29 @@
+project_name: kubectl-track
+release:
+  github:
+    owner: semihbkgr
+    name: kubectl-track
+builds:
+  - id: kubectl-track
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+      - "386"
+    env:
+      - CGO_ENABLED=0
+      - GO111MODULE=on
+    main: main.go
+    ldflags: -s -w
+      -X github.com/semihbkgr/kubectl-track/cmd.Version={{ .Version }}
+archives:
+  - id: kubectl-track
+    builds:
+      - kubectl-track
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
