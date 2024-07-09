@@ -16,7 +16,7 @@ func Start(watchRes watch.Interface, watchResTable watch.Interface) error {
 	go startWatchingResourceEvents(resource, watchRes, watchResTable)
 
 	klog.Info("start the program with the model")
-	p := tea.NewProgram(m, tea.WithAltScreen())
+	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 
 	if _, err := p.Run(); err != nil {
 		return fmt.Errorf("error running program: %w", err)

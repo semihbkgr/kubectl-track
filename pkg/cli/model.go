@@ -61,13 +61,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		if !m.selected {
-			if msg.String() == "up" || msg.String() == "k" {
+			if msg.String() == "up" {
 				if m.cursor > 0 {
 					m.cursor--
+					m.updateViewport(true)
 				}
-			} else if msg.String() == "down" || msg.String() == "j" {
+			} else if msg.String() == "down" {
 				if m.cursor < len(m.resource.Versions)-1 {
 					m.cursor++
+					m.updateViewport(true)
 				}
 			}
 		} else {
@@ -76,25 +78,37 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 
+	case tea.MouseMsg:
+		if m.selected {
+			var cmd tea.Cmd
+			m.yamlViewport, cmd = m.yamlViewport.Update(msg)
+			return m, cmd
+		} else {
+			var cmd tea.Cmd
+			m.viewport, cmd = m.viewport.Update(msg)
+			return m, cmd
+		}
 	case tea.WindowSizeMsg:
 		m.viewport.Width = msg.Width
 		m.viewport.Height = msg.Height
 		m.yamlViewport.Width = msg.Width
 		m.yamlViewport.Height = msg.Height
 	case TickMsg:
+		m.updateViewport(false)
 		return m, doTick()
 	}
 
 	return m, nil
 }
 
-func (m model) View() string {
-	if m.selected {
-		return m.yamlViewport.View()
-	}
-
+func (m *model) updateViewport(scroll bool) {
 	b := strings.Builder{}
 	for i, resVersion := range m.resource.Versions {
+		if i == m.cursor && scroll {
+			l := len(strings.Split(b.String(), "\n"))
+			m.viewport.SetYOffset(l - 9)
+		}
+
 		var bgColor lipgloss.TerminalColor = lipgloss.NoColor{}
 		if i == m.cursor {
 			bgColor = lipgloss.ANSIColor(239)
@@ -117,15 +131,14 @@ func (m model) View() string {
 			b.WriteString(m.rvTableCache[resVersion.Version])
 		}
 
-		if i == m.cursor && i > 0 && resVersion.Object != nil {
-			if resVersion.EventType == watch.Modified {
+		if i == m.cursor && i > 0 {
+			if resVersion.EventType == watch.Modified && resVersion.Object != nil {
 				if _, ok := m.rvDiffCache[resVersion.Version]; !ok {
 					diff := DiffRenderString(truncateObjectForDiff(*m.resource.Versions[i-1].Object).Object, truncateObjectForDiff(*resVersion.Object).Object)
-					d := lipgloss.NewStyle().PaddingLeft(2).Render(diff)
-					m.rvDiffCache[resVersion.Version] = d
+					m.rvDiffCache[resVersion.Version] = lipgloss.NewStyle().PaddingLeft(2).Render(diff)
 				}
 			} else if resVersion.EventType == watch.Added {
-				m.rvDiffCache[resVersion.Version] = lipgloss.NewStyle().Foreground(lipgloss.ANSIColor(82)).PaddingLeft(2).Render("New resource has been added\n")
+				m.rvDiffCache[resVersion.Version] = lipgloss.NewStyle().Foreground(lipgloss.ANSIColor(82)).PaddingLeft(2).Render("New resource has been created\n")
 			} else if resVersion.EventType == watch.Deleted {
 				m.rvDiffCache[resVersion.Version] = lipgloss.NewStyle().Foreground(lipgloss.ANSIColor(196)).PaddingLeft(2).Render("The resource has been deleted\n")
 			}
@@ -136,7 +149,17 @@ func (m model) View() string {
 		b.WriteByte('\n')
 	}
 
+	for i := 0; i < m.viewport.Height-9; i++ {
+		b.WriteByte('\n')
+	}
+
 	m.viewport.SetContent(b.String())
+}
+
+func (m model) View() string {
+	if m.selected {
+		return m.yamlViewport.View()
+	}
 
 	return m.viewport.View()
 }
