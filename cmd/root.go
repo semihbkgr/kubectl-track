@@ -18,11 +18,9 @@ import (
 var Version string
 
 var rootCmd = &cobra.Command{
-	Use:   "kubectl-track <resource> <name>",
-	Short: "Monitor and display changes for a Kubernetes resource, highlighting differences between resource versions",
-	Long: `kubectl-track monitors and displays changes for a specified Kubernetes resource, highlighting differences between resource versions to help in debugging and understanding resource evolution. 
-It continuously tracks the resource, displaying each resource version on change, offering clear insights and facilitating troubleshooting. 
-This makes it particularly useful when working with Kubernetes operators and reconciler loops.`,
+	Use:     "kubectl-track <resource> <name>",
+	Short:   "capture the changes between resource versions",
+	Long:    "kubectl-track monitors and displays changes for a Kubernetes resource, highlighting differences between resource versions to help in debugging and understanding resource evolution",
 	Version: Version,
 	Args:    cobra.ExactArgs(2),
 	RunE:    run,
@@ -73,7 +71,10 @@ func configureLogger(flagset *pflag.FlagSet) error {
 
 	logFlagSet := flag.NewFlagSet("", flag.PanicOnError)
 	klog.InitFlags(logFlagSet)
-	logFlagSet.Set("logtostderr", "false")
+	err = logFlagSet.Set("logtostderr", "false")
+	if err != nil {
+		return err
+	}
 	err = logFlagSet.Parse([]string{})
 	if err != nil {
 		return err

@@ -123,7 +123,10 @@ func (m *model) updateViewport(scroll bool) {
 				printer := printers.NewTablePrinter(printers.PrintOptions{Wide: true})
 				resVersion.Table.ColumnDefinitions = m.resource.TableColumnDefinition()
 				buf := bytes.NewBuffer([]byte{})
-				printer.PrintObj(resVersion.Table, buf)
+				err := printer.PrintObj(resVersion.Table, buf)
+				if err != nil {
+					panic(err)
+				}
 				t := lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.ANSIColor(153)).Render(buf.String())
 				m.rvTableCache[resVersion.Version] = t
 			}
