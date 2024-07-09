@@ -19,6 +19,9 @@ type model struct {
 	selected     bool
 	viewport     viewport.Model
 	yamlViewport viewport.Model
+	rvTableCache map[string]string
+	rvDiffCache  map[string]string
+	rvYamlCache  map[string]string
 }
 
 func (m model) Init() tea.Cmd {
@@ -43,9 +46,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.String() == "enter" {
 			if !m.selected {
 				resVersion := m.resource.Versions[m.cursor]
-				truncated := TruncateObject(*resVersion.Object)
-				y := MapToYaml(truncated.Object)
-				m.yamlViewport.SetContent(y)
+				if _, ok := m.rvYamlCache[resVersion.Version]; !ok {
+					truncated := truncateObjectForYaml(*resVersion.Object)
+					y := YamlRenderString(truncated.Object)
+					m.rvYamlCache[resVersion.Version] = y
+				}
+				m.yamlViewport.SetContent(m.rvYamlCache[resVersion.Version])
 				m.yamlViewport.SetYOffset(0)
 			}
 			m.selected = true
@@ -98,18 +104,28 @@ func (m model) View() string {
 		b.WriteByte('\n')
 		if resVersion.Table != nil {
 			//todo: colorize table
-			printer := printers.NewTablePrinter(printers.PrintOptions{Wide: true})
-			resVersion.Table.ColumnDefinitions = m.resource.TableColumnDefinition()
-			buf := bytes.NewBuffer([]byte{})
-			printer.PrintObj(resVersion.Table, buf)
-			t := lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.ANSIColor(153)).Render(buf.String())
-			b.WriteString(t)
+			if _, ok := m.rvTableCache[resVersion.Version]; !ok {
+				printer := printers.NewTablePrinter(printers.PrintOptions{Wide: true})
+				resVersion.Table.ColumnDefinitions = m.resource.TableColumnDefinition()
+				buf := bytes.NewBuffer([]byte{})
+				printer.PrintObj(resVersion.Table, buf)
+				t := lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.ANSIColor(153)).Render(buf.String())
+				m.rvTableCache[resVersion.Version] = t
+			}
+
+			b.WriteString(m.rvTableCache[resVersion.Version])
 		}
 
 		if i == m.cursor && i > 0 && resVersion.Object != nil {
-			b.WriteByte('\n')
-			diff := DiffString(TruncateObject(*m.resource.Versions[i-1].Object).Object, TruncateObject(*resVersion.Object).Object)
-			b.WriteString(lipgloss.NewStyle().PaddingLeft(2).Render(diff))
+			if m.resource.Versions[i-1].Object.GetUID() == resVersion.Object.GetUID() {
+				b.WriteByte('\n')
+				if _, ok := m.rvDiffCache[resVersion.Version]; !ok {
+					diff := DiffRenderString(truncateObjectForDiff(*m.resource.Versions[i-1].Object).Object, truncateObjectForDiff(*resVersion.Object).Object)
+					d := lipgloss.NewStyle().PaddingLeft(2).Render(diff)
+					m.rvDiffCache[resVersion.Version] = d
+				}
+				b.WriteString(m.rvDiffCache[resVersion.Version])
+			}
 		}
 
 		b.WriteByte('\n')
@@ -125,10 +141,19 @@ func newModel(resource *Resource) model {
 		resource:     resource,
 		viewport:     viewport.New(0, 0),
 		yamlViewport: viewport.New(0, 0),
+		rvTableCache: make(map[string]string),
+		rvDiffCache:  make(map[string]string),
+		rvYamlCache:  make(map[string]string),
 	}
 }
 
-func TruncateObject(u unstructured.Unstructured) unstructured.Unstructured {
+func truncateObjectForYaml(u unstructured.Unstructured) unstructured.Unstructured {
 	u.SetManagedFields(nil)
+	return u
+}
+
+func truncateObjectForDiff(u unstructured.Unstructured) unstructured.Unstructured {
+	u.SetManagedFields(nil)
+	u.SetResourceVersion("")
 	return u
 }

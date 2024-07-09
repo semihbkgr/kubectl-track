@@ -8,6 +8,7 @@ import (
 	"github.com/goccy/go-yaml/lexer"
 	"github.com/goccy/go-yaml/printer"
 	"github.com/semihbkgr/yamldiff/diff"
+	"k8s.io/klog"
 )
 
 var p printer.Printer
@@ -63,28 +64,32 @@ func init() {
 	}
 }
 
-func MapToYaml(a map[string]any) string {
+func YamlRenderString(a map[string]any) string {
 	y, err := yaml.Marshal(a)
 	if err != nil {
-		panic(err)
+		klog.Warning(err)
+		return ""
 	}
 	tokens := lexer.Tokenize(string(y))
 	return p.PrintTokens(tokens)
 }
 
-func DiffString(a map[string]any, b map[string]any) string {
+func DiffRenderString(a map[string]any, b map[string]any) string {
 	aYaml, err := yaml.Marshal(a)
 	if err != nil {
-		panic(err)
+		klog.Warning(err)
+		return ""
 	}
 	bYaml, err := yaml.Marshal(b)
 	if err != nil {
-		panic(err)
+		klog.Warning(err)
+		return ""
 	}
 
 	diffCtx, err := diff.NewDiffContextBytes(aYaml, bYaml, true)
 	if err != nil {
-		panic(err)
+		klog.Warning(err)
+		return ""
 	}
 
 	diffs := diffCtx.Diffs(diff.DefaultDiffOptions)

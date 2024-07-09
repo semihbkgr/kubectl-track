@@ -43,7 +43,7 @@ type ResourceVersion struct {
 }
 
 func NewResourceVersion(version string, timestamp time.Time) *ResourceVersion {
-	//todo
+	//todo: timestamp
 	return &ResourceVersion{
 		Version:   version,
 		Timestamp: timestamp,
