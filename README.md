@@ -6,6 +6,14 @@
 
 ## Installation
 
+### Krew
+
+```shell
+kubectl krew install track
+```
+
+### Source
+
 ```shell
 go install github.com/semihbkgr/kubectl-track@latest
 ```
